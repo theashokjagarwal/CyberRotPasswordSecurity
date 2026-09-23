@@ -1,149 +1,137 @@
-# PassGuard – Password Security Evaluation Tool
 
-College project for **CyberRotPasswordSecurity**  
-GitHub: https://github.com/theashokjagarwal/CyberRotPasswordSecurity
+---
 
-## Purpose
+## ⚡ Quick Start
 
-PassGuard is an educational password security awareness tool.
+```bash
+# 1. Clone the repo
+git clone https://github.com/theashokjagarwal/CyberRotPasswordSecurity.git
+cd CyberRotPasswordSecurity
 
-You type a password. The page checks it in your browser and shows:
-
-- Strength: Very Weak / Weak / Medium / Strong
-- Risk: Low / Medium / High
-- Score out of 100
-- Problems found
-- Suggestions to improve
-
-This is a simple BCA / college project. It is not a professional security product.
-
-## Privacy
-
-**Your password is checked locally in your browser and is never sent anywhere.**
-
-Flask only opens the webpage. The password is not sent to Python, not saved in a file, and not sent to any API.
-
-## Features
-
-- Live check while you type
-- Show / Hide password button
-- Length check (minimum 8, better 12+)
-- Checks lowercase, UPPERCASE, numbers, special characters
-- Finds repeated characters like `aaaa` or `1111`
-- Finds sequences like `1234`, `abcd`, `qwer`
-- Small common password list (`password`, `qwerty`, `admin`, ...)
-- Catches trick spelling like `p@ssw0rd`
-- Finds easy patterns like letters + year (`hello2024`)
-
-## Technologies
-
-- Python
-- Flask (only to show the page)
-- HTML
-- CSS
-- JavaScript (all password checks)
-
-No database. No extra libraries except Flask.
-
-## Project files
-
-PassGuard/
-
-├── app.py
-
-├── templates/index.html
-
-├── static/style.css
-
-├── rules/common_passwords.txt
-
-├── requirements.txt
-
-└── README.md
-
-
-
-- `app.py` — tiny Flask server. It only shows the page.
-- `templates/index.html` — the page and all JavaScript checks
-- `static/style.css` — look of the page
-- `rules/common_passwords.txt` — small list of common passwords
-
-## How it works
-
-1. Flask opens `index.html`.
-2. Flask also counts how many lines are in `common_passwords.txt` and shows: `Checked against 10 common passwords`.
-3. When you type, JavaScript checks the password inside the browser.
-4. Score starts at 0.
-5. Points are added for length and character types.
-6. Points are taken away for problems.
-7. If it is a common password, score is capped at 10.
-8. Score is mapped to Very Weak / Weak / Medium / Strong.
-
-This score is an educational estimate, not a scientifically exact measurement.
-
-## How to run on Windows
-
-1. Install Python from https://www.python.org/downloads/  
-   Tick **Add Python to PATH** during install.
-
-2. Put all project files in one folder, for example `Desktop\PassGuard`.
-
-3. Open Command Prompt and go to that folder:
-
-cd Desktop\PassGuard
-
-
-
-4. Install Flask:
-
+# 2. Install Flask
 python -m pip install flask
+# (use `py` instead of `python` on some Windows setups)
 
-
-
-If `python` does not work, try:
-
-py -m pip install flask
-
-
-
-5. Start the app:
-
+# 3. Run the app
 python app.py
 
-
-
-If `python` does not work, try:
-
-py app.py
-
-
-
-6. Open a browser and go to:
-
+# 4. Open your browser
 http://127.0.0.1:5000
+```
 
+Stop the server anytime with `Ctrl + C`.
 
+<details>
+<summary><strong>🪟 Full Windows walkthrough</strong></summary>
 
-7. Type a password. Results should change while you type.
+1. Install Python from [python.org](https://www.python.org/downloads/) — tick **Add Python to PATH**.
+2. Put all project files in one folder and open Command Prompt there.
+3. `python -m pip install flask` (or `py -m pip install flask`)
+4. `python app.py` (or `py app.py`)
+5. Open **http://127.0.0.1:5000**
+6. Type a password — results update live.
 
-To stop the server, click the Command Prompt window and press `Ctrl + C`.
+</details>
 
-## Test passwords
+---
 
-Try these:
+## 🧮 How Scoring Works
 
-| Password | What you should see |
+Score starts at **0** and is capped between **0–100**.
+
+<table>
+<tr><td>
+
+**➕ Points added**
+| Rule | Points |
 |---|---|
-| `qwerty` | Very Weak, common password, score about 10 or less |
-| `p@ssw0rd` | Very Weak, still caught as common |
-| `123456` | Very Weak, common password |
-| `hello2024` | Weak / Medium, letters + year |
-| `Strong#Pass2025` | Stronger score, mixed types, longer |
+| 8+ characters | +20 |
+| 12+ characters | +15 |
+| 16+ characters | +10 |
+| Lowercase | +10 |
+| UPPERCASE | +10 |
+| Number | +10 |
+| Special character | +15 |
 
-## Limitations
+</td><td>
 
-- Small common password list only (10 words)
-- Simple scoring, not a real security audit
-- Does not check if a password was leaked on the internet
-- For learning only
+**➖ Points deducted**
+| Rule | Points |
+|---|---|
+| Repeated characters | −15 |
+| Sequence | −15 |
+| Predictable pattern | −15 |
+| Shorter than 8 | −20 |
 
+</td></tr>
+</table>
+
+🚨 **Hard rule:** if the password matches the common-password list, the score is capped at **10**, no matter what else scores.
+
+| Score Range | Strength | Risk |
+|:---:|:---:|:---:|
+| 0 – 24 | 🔴 Very Weak | High |
+| 25 – 49 | 🟠 Weak | High |
+| 50 – 74 | 🟡 Medium | Medium |
+| 75 – 100 | 🟢 Strong | Low |
+
+*This is an educational estimate, not a scientific measurement.*
+
+---
+
+## 🧪 Example Results
+
+| Password | Result |
+|---|---|
+| `qwerty` | 🔴 Very Weak — common password |
+| `p@ssw0rd` | 🔴 Very Weak — still caught as common |
+| `123456` | 🔴 Very Weak — common password |
+| `hello2024` | 🟠 Weak/Medium — letters + year |
+| `Strong#Pass2025` | 🟢 Strong — long & mixed |
+
+---
+
+## ⚙️ Function Reference
+
+<details>
+<summary><strong>Click to expand the JavaScript function list</strong></summary>
+
+| Function | Purpose |
+|---|---|
+| `toggleShow()` | Show / hide password |
+| `checkLength(p)` | Flags passwords under 8 chars |
+| `hasLower(p)` / `hasUpper(p)` | Checks letter case |
+| `hasNumber(p)` / `hasSpecial(p)` | Checks digits / symbols |
+| `checkRepeat(p)` | Finds `aaaa`, `1111`, etc. |
+| `checkSequence(p)` | Finds `1234`, `abcd`, `qwer`... |
+| `stripTricks(p)` | Normalizes leetspeak (`@`→a, `0`→o...) |
+| `checkCommon(p)` | Matches the common-password list |
+| `checkPredictable(p)` | Flags letters+year or digits-only |
+| `getScore(p)` | Computes the final score |
+| `strengthName(score)` / `riskName(score)` | Maps score → label |
+| `checkPassword()` | Orchestrates everything & updates the UI |
+
+</details>
+
+---
+
+## 🚧 Limitations
+
+- 📋 Only 10 common passwords in the list
+- 🧮 Simple heuristic scoring, not a security audit
+- 🌐 Doesn't check real-world leaked-password databases
+- 🎓 Built for learning, not production use
+
+## 🔮 Roadmap
+
+- [ ] Random strong-password generator (client-side)
+- [ ] Expand `common_passwords.txt`
+- [ ] Dark / light theme toggle
+
+---
+
+<div align="center">
+
+Made with 💚 by **Team CyberRot** · Team No. 16
+
+</div>
