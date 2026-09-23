@@ -50,7 +50,6 @@
     </div>
 
     <script>
-        // Small list of very common passwords (same idea as rules/common_passwords.txt)
         var COMMON = [
             "password", "123456", "qwerty", "admin", "welcome",
             "password123", "abc123", "admin123", "letmein", "monkey"
@@ -67,7 +66,6 @@
         var tipsBox = document.getElementById("tips");
         var noProblems = document.getElementById("noProblems");
 
-        // Show or hide the password text
         function toggleShow() {
             if (pwd.type === "password") {
                 pwd.type = "text";
@@ -78,7 +76,6 @@
             }
         }
 
-        // Check if password is long enough
         function checkLength(p) {
             if (p.length < 8) {
                 return "Too short (use at least 8 characters)";
@@ -86,27 +83,22 @@
             return "";
         }
 
-        // Check lowercase letters
         function hasLower(p) {
             return /[a-z]/.test(p);
         }
 
-        // Check UPPERCASE letters
         function hasUpper(p) {
             return /[A-Z]/.test(p);
         }
 
-        // Check numbers
         function hasNumber(p) {
             return /[0-9]/.test(p);
         }
 
-        // Check special characters like @ # $
         function hasSpecial(p) {
             return /[^A-Za-z0-9]/.test(p);
         }
 
-        // Check repeated characters like aaaa or 1111
         function checkRepeat(p) {
             if (/(.)\1\1\1/.test(p)) {
                 return "Has repeated characters (like aaaa or 1111)";
@@ -114,7 +106,6 @@
             return "";
         }
 
-        // Check simple sequences like 1234, abcd, qwer
         function checkSequence(p) {
             var s = p.toLowerCase();
             var rows = [
@@ -137,7 +128,6 @@
             return "";
         }
 
-        // Change trick letters like @ 0 1 $ back to normal letters
         function stripTricks(p) {
             var s = p.toLowerCase();
             s = s.replace(/@/g, "a");
@@ -152,7 +142,6 @@
             return s;
         }
 
-        // Check if it is a common password (also catch p@ssw0rd)
         function checkCommon(p) {
             var low = p.toLowerCase();
             var clean = stripTricks(p);
@@ -165,7 +154,6 @@
             return "";
         }
 
-        // Check easy patterns like abc123, hello2024, 111111
         function checkPredictable(p) {
             if (/^[0-9]+$/.test(p) && p.length <= 8) {
                 return "Only numbers in a short password is easy to guess";
@@ -179,7 +167,6 @@
             return "";
         }
 
-        // Add points, then take points away for problems
         function getScore(p, problems) {
             var score = 0;
 
@@ -226,7 +213,6 @@
                 score = 100;
             }
 
-            // Common password is a hard fail
             if (checkCommon(p) !== "") {
                 if (score > 10) {
                     score = 10;
@@ -236,7 +222,6 @@
             return score;
         }
 
-        // Turn score into words
         function strengthName(score) {
             if (score < 25) {
                 return "Very Weak";
@@ -250,7 +235,6 @@
             return "Strong";
         }
 
-        // Turn score into risk words
         function riskName(score) {
             if (score < 50) {
                 return "High";
@@ -261,7 +245,6 @@
             return "Low";
         }
 
-        // Run all checks and update the page
         function checkPassword() {
             var p = pwd.value;
 
@@ -274,8 +257,8 @@
 
             var problems = [];
             var tips = [];
-
             var msg;
+
             msg = checkLength(p);
             if (msg !== "") {
                 problems.push(msg);
@@ -326,8 +309,6 @@
             }
 
             var score = getScore(p, problems);
-            var strength = strengthName(score);
-            var risk = riskName(score);
 
             scoreText.textContent = score + " / 100";
             bar.style.width = score + "%";
@@ -338,8 +319,8 @@
                 bar.className = "bar orange";
             }
 
-            strengthBadge.textContent = "Strength: " + strength;
-            riskBadge.textContent = "Risk: " + risk;
+            strengthBadge.textContent = "Strength: " + strengthName(score);
+            riskBadge.textContent = "Risk: " + riskName(score);
             strengthBadge.className = "badge";
             riskBadge.className = "badge";
             if (score < 50) {
