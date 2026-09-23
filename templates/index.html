@@ -1,103 +1,382 @@
-<script>
-    // Common weak passwords to check against
-    const COMMON = ["password", "123456", "qwerty", "admin", "welcome", "password123", "letmein", "monkey"];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PassGuard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1>PassGuard</h1>
+            <span class="tag">Password Security Evaluation Tool</span>
+            <p class="desc">Type a password to see how strong it looks. This is a simple college project for security awareness.</p>
 
-    // Cache HTML elements
-    const pwd = document.getElementById("pwd");
-    const toggleBtn = document.getElementById("toggleBtn");
-    const results = document.getElementById("results");
-    const scoreText = document.getElementById("scoreText");
-    const bar = document.getElementById("bar");
-    const strengthBadge = document.getElementById("strengthBadge");
-    const riskBadge = document.getElementById("riskBadge");
-    const problemsBox = document.getElementById("problems");
-    const tipsBox = document.getElementById("tips");
-    const noProblems = document.getElementById("noProblems");
+            <p class="privacy">Your password is checked locally in your browser and is never sent anywhere.</p>
+            <p class="count">Checked against {{ common_count }} common passwords</p>
 
-    // 1. Show/Hide Password
-    toggleBtn.onclick = () => {
-        const isHidden = pwd.type === "password";
-        pwd.type = isHidden ? "text" : "password";
-        toggleBtn.textContent = isHidden ? "Hide" : "Show";
-    };
+            <label for="pwd">Password</label>
+            <div class="row">
+                <input id="pwd" type="password" autocomplete="off" spellcheck="false">
+                <button type="button" id="toggleBtn">Show</button>
+            </div>
+            <p class="hint">Results update while you type. Nothing is saved.</p>
 
-    // 2. Main Evaluation Function
-    pwd.oninput = () => {
-        const val = pwd.value;
+            <div id="results" class="results">
+                <div class="score-line">
+                    <span>Score</span>
+                    <strong id="scoreText">0 / 100</strong>
+                </div>
+                <div class="bar-bg">
+                    <div id="bar" class="bar"></div>
+                </div>
 
-        // Hide results if input is empty
-        if (!val) {
-            results.className = "results";
-            return;
-        }
-        results.className = "results show";
+                <div class="meta">
+                    <span id="strengthBadge" class="badge">Strength: -</span>
+                    <span id="riskBadge" class="badge">Risk: -</span>
+                </div>
 
-        let score = 0;
-        const problems = [];
-        const tips = [];
+                <h2>Problems detected</h2>
+                <ul id="problems"></ul>
+                <p id="noProblems" class="ok-text" style="display:none;">No major problems found.</p>
 
-        // Check Length
-        if (val.length >= 16) score += 45;
-        else if (val.length >= 12) score += 35;
-        else if (val.length >= 8) score += 20;
-        else {
-            score -= 20;
-            problems.push("Too short (use at least 8 characters)");
-            tips.push("Make it at least 8 characters. 12 or more is better.");
-        }
+                <h2>Suggestions</h2>
+                <ul id="tips"></ul>
 
-        // Check Character Diversity (10 pts each, +15 for symbols)
-        if (/[a-z]/.test(val)) score += 10; else { problems.push("No lowercase letters"); tips.push("Add lowercase letters (a-z)."); }
-        if (/[A-Z]/.test(val)) score += 10; else { problems.push("No UPPERCASE letters"); tips.push("Add uppercase letters (A-Z)."); }
-        if (/[0-9]/.test(val)) score += 10; else { problems.push("No numbers"); tips.push("Add numbers (0-9)."); }
-        if (/[^A-Za-z0-9]/.test(val)) score += 15; else { problems.push("No special characters"); tips.push("Add a symbol like # @ ! %"); }
+                <p class="note">This is an educational estimate, not a scientifically exact measurement. Use it to learn, not as a guarantee.</p>
+            </div>
+        </div>
+    </div>
 
-        // Check Bad Patterns (-15 pts each)
-        if (/(.)\1\1\1/.test(val)) {
-            score -= 15;
-            problems.push("Has repeated characters (like aaaa or 1111)");
-        }
-        if (/1234|abcd|qwer|asdf/i.test(val)) {
-            score -= 15;
-            problems.push("Has a simple sequence (like 1234, abcd, or qwer)");
-        }
-        if (/^[a-zA-Z]+[0-9]{2,4}$/.test(val) \vert{}\vert{} /^[0-9]+$/.test(val)) {
-            score -= 15;
-            problems.push("Looks like letters plus a year, or numbers only");
-        }
+    <script>
+        // Small list of very common passwords (same idea as rules/common_passwords.txt)
+        var COMMON = [
+            "password", "123456", "qwerty", "admin", "welcome",
+            "password123", "abc123", "admin123", "letmein", "monkey"
+        ];
 
-        // Check Common Passwords (Hard Cap at 10)
-        const clean = val.toLowerCase().replace(/[@4]/g, "a").replace(/[0]/g, "o").replace(/[1!]/g, "i").replace(/[$5]/g, "s");
-        if (COMMON.some(bad => val.toLowerCase().includes(bad) || clean.includes(bad))) {
-            problems.push("This is a common password");
-            score = Math.min(score, 10);
-        }
+        var pwd = document.getElementById("pwd");
+        var toggleBtn = document.getElementById("toggleBtn");
+        var results = document.getElementById("results");
+        var scoreText = document.getElementById("scoreText");
+        var bar = document.getElementById("bar");
+        var strengthBadge = document.getElementById("strengthBadge");
+        var riskBadge = document.getElementById("riskBadge");
+        var problemsBox = document.getElementById("problems");
+        var tipsBox = document.getElementById("tips");
+        var noProblems = document.getElementById("noProblems");
 
-        // Keep score strictly between 0 and 100
-        score = Math.max(0, Math.min(100, score));
-
-        // Update UI
-        scoreText.textContent = `${score} / 100`;
-        bar.style.width = `${score}%`;
-
-        let strength = "Very Weak", risk = "High", statusClass = "bad", barColor = "";
-        if (score >= 75) {
-            strength = "Strong"; risk = "Low"; statusClass = "ok"; barColor = "green";
-        } else if (score >= 50) {
-            strength = "Medium"; risk = "Medium"; statusClass = "warn"; barColor = "orange";
-        } else if (score >= 25) {
-            strength = "Weak";
+        // Show or hide the password text
+        function toggleShow() {
+            if (pwd.type === "password") {
+                pwd.type = "text";
+                toggleBtn.textContent = "Hide";
+            } else {
+                pwd.type = "password";
+                toggleBtn.textContent = "Show";
+            }
         }
 
-        bar.className = `bar ${barColor}`;
-        strengthBadge.textContent = `Strength: ${strength}`;
-        riskBadge.textContent = `Risk: ${risk}`;
-        strengthBadge.className = `badge ${statusClass}`;
-        riskBadge.className = `badge ${statusClass}`;
+        // Check if password is long enough
+        function checkLength(p) {
+            if (p.length < 8) {
+                return "Too short (use at least 8 characters)";
+            }
+            return "";
+        }
 
-        // Render Problems & Tips
-        noProblems.style.display = problems.length === 0 ? "block" : "none";
-        problemsBox.innerHTML = problems.map(p => `<li>${p}</li>`).join("");
-        tipsBox.innerHTML = tips.length ? tips.map(t => `<li>${t}</li>`).join("") : "<li>Looks mixed and long. Still never reuse it across sites.</li>";
-    };
-</script>
+        // Check lowercase letters
+        function hasLower(p) {
+            return /[a-z]/.test(p);
+        }
+
+        // Check UPPERCASE letters
+        function hasUpper(p) {
+            return /[A-Z]/.test(p);
+        }
+
+        // Check numbers
+        function hasNumber(p) {
+            return /[0-9]/.test(p);
+        }
+
+        // Check special characters like @ # $
+        function hasSpecial(p) {
+            return /[^A-Za-z0-9]/.test(p);
+        }
+
+        // Check repeated characters like aaaa or 1111
+        function checkRepeat(p) {
+            if (/(.)\1\1\1/.test(p)) {
+                return "Has repeated characters (like aaaa or 1111)";
+            }
+            return "";
+        }
+
+        // Check simple sequences like 1234, abcd, qwer
+        function checkSequence(p) {
+            var s = p.toLowerCase();
+            var rows = [
+                "01234567890",
+                "abcdefghijklmnopqrstuvwxyz",
+                "qwertyuiop",
+                "asdfghjkl",
+                "zxcvbnm"
+            ];
+            var i, r, chunk, rev;
+            for (i = 0; i < s.length - 3; i++) {
+                chunk = s.substring(i, i + 4);
+                for (r = 0; r < rows.length; r++) {
+                    rev = rows[r].split("").reverse().join("");
+                    if (rows[r].indexOf(chunk) !== -1 || rev.indexOf(chunk) !== -1) {
+                        return "Has a simple sequence (like 1234, abcd, or qwer)";
+                    }
+                }
+            }
+            return "";
+        }
+
+        // Change trick letters like @ 0 1 $ back to normal letters
+        function stripTricks(p) {
+            var s = p.toLowerCase();
+            s = s.replace(/@/g, "a");
+            s = s.replace(/0/g, "o");
+            s = s.replace(/1/g, "i");
+            s = s.replace(/\$/g, "s");
+            s = s.replace(/3/g, "e");
+            s = s.replace(/4/g, "a");
+            s = s.replace(/5/g, "s");
+            s = s.replace(/7/g, "t");
+            s = s.replace(/!/g, "i");
+            return s;
+        }
+
+        // Check if it is a common password (also catch p@ssw0rd)
+        function checkCommon(p) {
+            var low = p.toLowerCase();
+            var clean = stripTricks(p);
+            var i;
+            for (i = 0; i < COMMON.length; i++) {
+                if (low === COMMON[i] || clean === COMMON[i]) {
+                    return "This is a common password";
+                }
+            }
+            return "";
+        }
+
+        // Check easy patterns like abc123, hello2024, 111111
+        function checkPredictable(p) {
+            if (/^[0-9]+$/.test(p) && p.length <= 8) {
+                return "Only numbers in a short password is easy to guess";
+            }
+            if (/^[a-zA-Z]+[0-9]{2,4}$/.test(p)) {
+                return "Looks like letters plus a year or 123";
+            }
+            if (/^(.)\1{5,}$/.test(p)) {
+                return "Same character repeated many times";
+            }
+            return "";
+        }
+
+        // Add points, then take points away for problems
+        function getScore(p, problems) {
+            var score = 0;
+
+            if (p.length >= 8) {
+                score = score + 20;
+            }
+            if (p.length >= 12) {
+                score = score + 15;
+            }
+            if (p.length >= 16) {
+                score = score + 10;
+            }
+
+            if (hasLower(p)) {
+                score = score + 10;
+            }
+            if (hasUpper(p)) {
+                score = score + 10;
+            }
+            if (hasNumber(p)) {
+                score = score + 10;
+            }
+            if (hasSpecial(p)) {
+                score = score + 15;
+            }
+
+            if (checkRepeat(p) !== "") {
+                score = score - 15;
+            }
+            if (checkSequence(p) !== "") {
+                score = score - 15;
+            }
+            if (checkPredictable(p) !== "") {
+                score = score - 15;
+            }
+            if (p.length < 8) {
+                score = score - 20;
+            }
+
+            if (score < 0) {
+                score = 0;
+            }
+            if (score > 100) {
+                score = 100;
+            }
+
+            // Common password is a hard fail
+            if (checkCommon(p) !== "") {
+                if (score > 10) {
+                    score = 10;
+                }
+            }
+
+            return score;
+        }
+
+        // Turn score into words
+        function strengthName(score) {
+            if (score < 25) {
+                return "Very Weak";
+            }
+            if (score < 50) {
+                return "Weak";
+            }
+            if (score < 75) {
+                return "Medium";
+            }
+            return "Strong";
+        }
+
+        // Turn score into risk words
+        function riskName(score) {
+            if (score < 50) {
+                return "High";
+            }
+            if (score < 75) {
+                return "Medium";
+            }
+            return "Low";
+        }
+
+        // Run all checks and update the page
+        function checkPassword() {
+            var p = pwd.value;
+
+            if (p.length === 0) {
+                results.className = "results";
+                return;
+            }
+
+            results.className = "results show";
+
+            var problems = [];
+            var tips = [];
+
+            var msg;
+            msg = checkLength(p);
+            if (msg !== "") {
+                problems.push(msg);
+                tips.push("Make it at least 8 characters. 12 or more is better.");
+            } else if (p.length < 12) {
+                tips.push("12 or more characters is safer.");
+            }
+
+            if (!hasLower(p)) {
+                problems.push("No lowercase letters");
+                tips.push("Add lowercase letters (a-z).");
+            }
+            if (!hasUpper(p)) {
+                problems.push("No UPPERCASE letters");
+                tips.push("Add uppercase letters (A-Z).");
+            }
+            if (!hasNumber(p)) {
+                problems.push("No numbers");
+                tips.push("Add numbers (0-9).");
+            }
+            if (!hasSpecial(p)) {
+                problems.push("No special characters");
+                tips.push("Add a symbol like # @ ! %");
+            }
+
+            msg = checkRepeat(p);
+            if (msg !== "") {
+                problems.push(msg);
+                tips.push("Avoid repeating the same character.");
+            }
+
+            msg = checkSequence(p);
+            if (msg !== "") {
+                problems.push(msg);
+                tips.push("Avoid keyboard rows and easy sequences.");
+            }
+
+            msg = checkCommon(p);
+            if (msg !== "") {
+                problems.push(msg);
+                tips.push("Do not use famous passwords like password or qwerty.");
+            }
+
+            msg = checkPredictable(p);
+            if (msg !== "") {
+                problems.push(msg);
+                tips.push("Do not use name + year, or letters + 123.");
+            }
+
+            var score = getScore(p, problems);
+            var strength = strengthName(score);
+            var risk = riskName(score);
+
+            scoreText.textContent = score + " / 100";
+            bar.style.width = score + "%";
+            bar.className = "bar";
+            if (score >= 75) {
+                bar.className = "bar green";
+            } else if (score >= 50) {
+                bar.className = "bar orange";
+            }
+
+            strengthBadge.textContent = "Strength: " + strength;
+            riskBadge.textContent = "Risk: " + risk;
+            strengthBadge.className = "badge";
+            riskBadge.className = "badge";
+            if (score < 50) {
+                strengthBadge.className = "badge bad";
+                riskBadge.className = "badge bad";
+            } else if (score < 75) {
+                strengthBadge.className = "badge warn";
+                riskBadge.className = "badge warn";
+            } else {
+                strengthBadge.className = "badge ok";
+                riskBadge.className = "badge ok";
+            }
+
+            problemsBox.innerHTML = "";
+            tipsBox.innerHTML = "";
+
+            var i;
+            if (problems.length === 0) {
+                noProblems.style.display = "block";
+            } else {
+                noProblems.style.display = "none";
+                for (i = 0; i < problems.length; i++) {
+                    problemsBox.innerHTML += "<li>" + problems[i] + "</li>";
+                }
+            }
+
+            if (tips.length === 0) {
+                tipsBox.innerHTML = "<li>Looks mixed and long. Still never reuse it on many sites.</li>";
+            } else {
+                for (i = 0; i < tips.length; i++) {
+                    tipsBox.innerHTML += "<li>" + tips[i] + "</li>";
+                }
+            }
+        }
+
+        toggleBtn.onclick = toggleShow;
+        pwd.oninput = checkPassword;
+    </script>
+</body>
+</html>
